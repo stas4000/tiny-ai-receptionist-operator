@@ -1,0 +1,962 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#06070a">
+  <title>Tiny AI Receptionist Operator | Bles Software</title>
+  <meta name="description" content="An open-source AI receptionist demo that turns messy inbound inquiries into qualified leads, handoff notes, and owner-ready summaries.">
+  <link rel="icon" href="data:,">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #06070a;
+      --ink: #f5f7fb;
+      --muted: rgba(245, 247, 251, 0.68);
+      --soft: rgba(245, 247, 251, 0.5);
+      --line: rgba(255, 255, 255, 0.16);
+      --panel: rgba(10, 12, 18, 0.72);
+      --panel-strong: rgba(15, 19, 28, 0.9);
+      --field: rgba(255, 255, 255, 0.08);
+      --cyan: #78d7ff;
+      --green: #91f3bd;
+      --coral: #ff9b88;
+      --yellow: #ffe08a;
+      --shadow: rgba(0, 0, 0, 0.36);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      min-height: 100%;
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    body {
+      overflow-x: hidden;
+    }
+
+    #scene {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      background: var(--bg);
+      z-index: 0;
+    }
+
+    .shell {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      padding: clamp(16px, 3vw, 32px);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: clamp(16px, 2.5vw, 26px);
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      color: rgba(245, 247, 251, 0.78);
+      font-size: 0.9rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      font-weight: 760;
+    }
+
+    .mark {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      border: 1px solid rgba(120, 215, 255, 0.42);
+      background:
+        linear-gradient(135deg, rgba(120, 215, 255, 0.2), rgba(145, 243, 189, 0.12)),
+        rgba(255, 255, 255, 0.06);
+      box-shadow: inset 0 0 18px rgba(120, 215, 255, 0.18);
+    }
+
+    .topbar a {
+      color: var(--ink);
+      text-decoration: none;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      padding: 9px 12px;
+      background: rgba(255, 255, 255, 0.07);
+      backdrop-filter: blur(14px);
+      white-space: nowrap;
+    }
+
+    .workbench {
+      display: grid;
+      grid-template-columns: minmax(280px, 0.9fr) minmax(360px, 1.18fr) minmax(280px, 0.92fr);
+      gap: clamp(14px, 2vw, 22px);
+      align-items: stretch;
+      min-height: 0;
+    }
+
+    .panel {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.035)),
+        var(--panel);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.12),
+        0 24px 80px var(--shadow);
+      backdrop-filter: blur(18px) saturate(130%);
+      overflow: hidden;
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.11);
+      color: rgba(245, 247, 251, 0.76);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      font-weight: 800;
+    }
+
+    .panel-body {
+      padding: clamp(14px, 2vw, 18px);
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: clamp(2.45rem, 6vw, 6.8rem);
+      line-height: 0.88;
+      max-width: 920px;
+      letter-spacing: 0;
+    }
+
+    .hero p {
+      margin: 16px 0 0;
+      max-width: 660px;
+      color: var(--muted);
+      font-size: clamp(1rem, 1.7vw, 1.22rem);
+      line-height: 1.55;
+    }
+
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 18px;
+    }
+
+    .tag {
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 999px;
+      padding: 7px 10px;
+      color: rgba(245, 247, 251, 0.78);
+      background: rgba(255, 255, 255, 0.06);
+      font-size: 0.8rem;
+      font-weight: 720;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: rgba(245, 247, 251, 0.76);
+      font-size: 0.82rem;
+      font-weight: 760;
+    }
+
+    textarea,
+    input,
+    select {
+      width: 100%;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      background: var(--field);
+      color: var(--ink);
+      font: inherit;
+      outline: none;
+    }
+
+    textarea {
+      min-height: 214px;
+      resize: vertical;
+      padding: 14px;
+      line-height: 1.48;
+    }
+
+    textarea:focus,
+    input:focus,
+    select:focus {
+      border-color: rgba(120, 215, 255, 0.72);
+      box-shadow: 0 0 0 3px rgba(120, 215, 255, 0.13);
+    }
+
+    .sample-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin: 12px 0 14px;
+    }
+
+    button {
+      font: inherit;
+      color: var(--ink);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      cursor: pointer;
+    }
+
+    .sample-btn {
+      min-height: 38px;
+      padding: 8px;
+      color: rgba(245, 247, 251, 0.76);
+      font-size: 0.8rem;
+      font-weight: 760;
+    }
+
+    .sample-btn:hover,
+    .sample-btn.active {
+      border-color: rgba(145, 243, 189, 0.5);
+      color: var(--ink);
+      background: rgba(145, 243, 189, 0.12);
+    }
+
+    .primary {
+      width: 100%;
+      min-height: 48px;
+      margin-top: 12px;
+      background:
+        linear-gradient(135deg, rgba(120, 215, 255, 0.28), rgba(145, 243, 189, 0.18)),
+        rgba(255, 255, 255, 0.1);
+      border-color: rgba(120, 215, 255, 0.48);
+      font-weight: 860;
+    }
+
+    .primary:hover {
+      filter: brightness(1.08);
+    }
+
+    .metric-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .metric {
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.055);
+    }
+
+    .metric span {
+      display: block;
+      color: var(--soft);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      font-weight: 800;
+    }
+
+    .metric strong {
+      display: block;
+      margin-top: 6px;
+      font-size: clamp(1.1rem, 2vw, 1.5rem);
+    }
+
+    .trace {
+      display: grid;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 28px 1fr auto;
+      align-items: center;
+      gap: 10px;
+      min-height: 52px;
+      padding: 11px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.055);
+    }
+
+    .step-index {
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      background: rgba(120, 215, 255, 0.12);
+      color: var(--cyan);
+      font-weight: 860;
+      font-size: 0.8rem;
+    }
+
+    .step h3 {
+      margin: 0;
+      font-size: 0.96rem;
+    }
+
+    .step p {
+      margin: 3px 0 0;
+      color: var(--soft);
+      font-size: 0.8rem;
+      line-height: 1.35;
+    }
+
+    .step-state {
+      color: rgba(245, 247, 251, 0.55);
+      font-size: 0.74rem;
+      font-weight: 820;
+      text-transform: uppercase;
+      min-width: 64px;
+      text-align: right;
+    }
+
+    .step.done {
+      border-color: rgba(145, 243, 189, 0.34);
+      background: rgba(145, 243, 189, 0.08);
+    }
+
+    .step.done .step-state {
+      color: var(--green);
+    }
+
+    .lead-card {
+      display: grid;
+      gap: 12px;
+      margin-top: 16px;
+      padding: 14px;
+      border: 1px solid rgba(145, 243, 189, 0.25);
+      border-radius: 8px;
+      background:
+        linear-gradient(135deg, rgba(145, 243, 189, 0.12), rgba(120, 215, 255, 0.08)),
+        rgba(255, 255, 255, 0.055);
+    }
+
+    .lead-card h2 {
+      margin: 0;
+      font-size: clamp(1.25rem, 2vw, 1.7rem);
+      line-height: 1.08;
+    }
+
+    .lead-fields {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .field {
+      min-width: 0;
+      border: 1px solid rgba(255, 255, 255, 0.11);
+      border-radius: 8px;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.18);
+    }
+
+    .field span {
+      display: block;
+      color: var(--soft);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      font-weight: 820;
+    }
+
+    .field strong {
+      display: block;
+      margin-top: 4px;
+      overflow-wrap: anywhere;
+      font-size: 0.94rem;
+    }
+
+    .message-preview {
+      display: grid;
+      gap: 12px;
+    }
+
+    .message {
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      padding: 13px;
+      background: var(--panel-strong);
+    }
+
+    .message h3 {
+      margin: 0 0 8px;
+      color: var(--cyan);
+      font-size: 0.9rem;
+    }
+
+    .message pre {
+      margin: 0;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      color: rgba(245, 247, 251, 0.82);
+      font: 0.84rem/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      color: rgba(245, 247, 251, 0.6);
+      font-size: 0.82rem;
+    }
+
+    .footer a {
+      color: var(--ink);
+      text-decoration-color: rgba(120, 215, 255, 0.55);
+      text-underline-offset: 4px;
+    }
+
+    .status-pill {
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 999px;
+      padding: 7px 10px;
+      background: rgba(255, 255, 255, 0.06);
+      color: rgba(245, 247, 251, 0.72);
+      white-space: nowrap;
+    }
+
+    @media (max-width: 1100px) {
+      .workbench {
+        grid-template-columns: 1fr;
+      }
+
+      .hero h1 {
+        font-size: clamp(2.5rem, 12vw, 5.4rem);
+      }
+
+      textarea {
+        min-height: 164px;
+      }
+    }
+
+    @media (max-width: 680px) {
+      .shell {
+        padding: 14px;
+      }
+
+      .topbar,
+      .footer {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .sample-grid,
+      .metric-strip,
+      .lead-fields {
+        grid-template-columns: 1fr;
+      }
+
+      .panel-head {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .step {
+        grid-template-columns: 28px 1fr;
+      }
+
+      .step-state {
+        grid-column: 2;
+        text-align: left;
+      }
+    }
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <canvas id="scene" aria-hidden="true"></canvas>
+
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <span class="mark" aria-hidden="true"></span>
+        <span>Bles Software / Open Source Operator Lab</span>
+      </div>
+      <a href="https://github.com/stas4000/tiny-ai-receptionist-operator" id="sourceLink">Source code</a>
+    </header>
+
+    <main class="workbench">
+      <section class="panel hero" aria-labelledby="title">
+        <div class="panel-head">
+          <span>Inbound request</span>
+          <span class="status-pill" id="cameraStatus">No API keys needed</span>
+        </div>
+        <div class="panel-body">
+          <h1 id="title">Tiny AI Receptionist Operator</h1>
+          <p>Paste a messy website inquiry. The operator extracts the buyer, need, urgency, budget signal, and next action, then formats the exact owner handoff.</p>
+          <div class="tag-row" aria-label="Key features">
+            <span class="tag">Open source</span>
+            <span class="tag">Lead qualification</span>
+            <span class="tag">Owner handoff</span>
+            <span class="tag">Static demo</span>
+          </div>
+
+          <div class="sample-grid" aria-label="Sample inquiries">
+            <button class="sample-btn active" data-sample="clinic" type="button">Clinic</button>
+            <button class="sample-btn" data-sample="restaurant" type="button">Restaurant</button>
+            <button class="sample-btn" data-sample="agency" type="button">Agency</button>
+          </div>
+
+          <label for="inquiry">Incoming inquiry</label>
+          <textarea id="inquiry" spellcheck="true"></textarea>
+          <button class="primary" id="runOperator" type="button">Run receptionist operator</button>
+
+          <div class="metric-strip" aria-label="Lead metrics">
+            <div class="metric">
+              <span>Lead score</span>
+              <strong id="scoreMetric">0</strong>
+            </div>
+            <div class="metric">
+              <span>Urgency</span>
+              <strong id="urgencyMetric">Waiting</strong>
+            </div>
+            <div class="metric">
+              <span>Next step</span>
+              <strong id="actionMetric">None</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="traceTitle">
+        <div class="panel-head">
+          <span id="traceTitle">Operator trace</span>
+          <span class="status-pill" id="runState">Ready</span>
+        </div>
+        <div class="panel-body">
+          <div class="trace" id="trace">
+            <article class="step" data-step="listen">
+              <span class="step-index">1</span>
+              <div>
+                <h3>Listen</h3>
+                <p>Capture the raw message without forcing the buyer into a form.</p>
+              </div>
+              <span class="step-state">Idle</span>
+            </article>
+            <article class="step" data-step="extract">
+              <span class="step-index">2</span>
+              <div>
+                <h3>Extract</h3>
+                <p>Find name, contact, business type, request, timing, and budget clues.</p>
+              </div>
+              <span class="step-state">Idle</span>
+            </article>
+            <article class="step" data-step="qualify">
+              <span class="step-index">3</span>
+              <div>
+                <h3>Qualify</h3>
+                <p>Score the lead and decide whether to call, schedule, or nurture.</p>
+              </div>
+              <span class="step-state">Idle</span>
+            </article>
+            <article class="step" data-step="handoff">
+              <span class="step-index">4</span>
+              <div>
+                <h3>Handoff</h3>
+                <p>Prepare the owner-ready Telegram and Gmail summary.</p>
+              </div>
+              <span class="step-state">Idle</span>
+            </article>
+          </div>
+
+          <div class="lead-card" id="leadCard">
+            <h2 id="summary">Run the operator to generate the lead brief.</h2>
+            <div class="lead-fields">
+              <div class="field">
+                <span>Name</span>
+                <strong id="leadName">Unknown</strong>
+              </div>
+              <div class="field">
+                <span>Contact</span>
+                <strong id="leadContact">Missing</strong>
+              </div>
+              <div class="field">
+                <span>Need</span>
+                <strong id="leadNeed">Not classified</strong>
+              </div>
+              <div class="field">
+                <span>Owner action</span>
+                <strong id="leadAction">No action yet</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="deliveryTitle">
+        <div class="panel-head">
+          <span id="deliveryTitle">Delivery preview</span>
+          <span class="status-pill">Dry run</span>
+        </div>
+        <div class="panel-body message-preview">
+          <article class="message">
+            <h3>Telegram owner alert</h3>
+            <pre id="telegramPreview">Qualified lead summary will appear here.</pre>
+          </article>
+          <article class="message">
+            <h3>Gmail follow-up note</h3>
+            <pre id="gmailPreview">Follow-up email draft will appear here.</pre>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>Built for public demos, lead capture experiments, and local-business AI operators.</span>
+      <span><a href="https://bles-software.com">Bles Software</a> builds the production version.</span>
+    </footer>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+
+    const samples = {
+      clinic: "Hi, this is Maya from Northline Dental. We miss a lot of calls during treatment hours and need someone to answer, qualify emergencies, and book consults. We want this working this week. Budget is around $1,500/month. You can reach me at maya@northline.example or 555-0184.",
+      restaurant: "My name is Daniel, I run a busy restaurant. People call about reservations, private events, and delivery issues while the staff is slammed. I need an AI receptionist that can answer quickly and send me only the important stuff. Phone is 555-0129. Need it before next weekend.",
+      agency: "Hey, I am Sara from a small marketing agency. We get form leads from clinics and contractors but the details are messy. I want the system to ask smart follow up questions, score the lead, and send our team a clean summary in Gmail and Telegram. Email sara@northstar.example. Budget maybe $900 to start."
+    };
+
+    const inquiry = document.getElementById('inquiry');
+    const runButton = document.getElementById('runOperator');
+    const sampleButtons = [...document.querySelectorAll('.sample-btn')];
+    const steps = [...document.querySelectorAll('.step')];
+    const runState = document.getElementById('runState');
+
+    const fields = {
+      scoreMetric: document.getElementById('scoreMetric'),
+      urgencyMetric: document.getElementById('urgencyMetric'),
+      actionMetric: document.getElementById('actionMetric'),
+      summary: document.getElementById('summary'),
+      leadName: document.getElementById('leadName'),
+      leadContact: document.getElementById('leadContact'),
+      leadNeed: document.getElementById('leadNeed'),
+      leadAction: document.getElementById('leadAction'),
+      telegramPreview: document.getElementById('telegramPreview'),
+      gmailPreview: document.getElementById('gmailPreview')
+    };
+
+    inquiry.value = samples.clinic;
+
+    sampleButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        sampleButtons.forEach((item) => item.classList.remove('active'));
+        button.classList.add('active');
+        inquiry.value = samples[button.dataset.sample];
+        resetTrace();
+      });
+    });
+
+    runButton.addEventListener('click', async () => {
+      const result = qualifyLead(inquiry.value);
+      runButton.disabled = true;
+      resetTrace();
+      runState.textContent = 'Running';
+
+      for (const step of steps) {
+        step.classList.add('done');
+        step.querySelector('.step-state').textContent = 'Done';
+        await wait(210);
+      }
+
+      renderLead(result);
+      runState.textContent = 'Ready';
+      runButton.disabled = false;
+    });
+
+    function resetTrace() {
+      steps.forEach((step) => {
+        step.classList.remove('done');
+        step.querySelector('.step-state').textContent = 'Idle';
+      });
+      runState.textContent = 'Ready';
+    }
+
+    function wait(ms) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    function qualifyLead(rawInput) {
+      const text = String(rawInput || '').replace(/\s+/g, ' ').trim();
+      const lower = text.toLowerCase();
+      const email = text.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i)?.[0] || '';
+      const phone = text.match(/(?:\+?\d[\d .()-]{6,}\d)/)?.[0] || '';
+      const contact = email || phone || 'Missing';
+      const name = extractName(text) || 'Unknown buyer';
+      const business = classifyBusiness(lower);
+      const need = classifyNeed(lower);
+      const urgency = classifyUrgency(lower);
+      const budget = extractBudget(text);
+      const score = scoreLead({ contact, urgency, budget, need, text });
+      const action = chooseAction(score, urgency, contact);
+      const summary = `${name} needs ${need.toLowerCase()} for ${business.toLowerCase()}. ${urgency} urgency. ${action}.`;
+
+      return {
+        name,
+        contact,
+        business,
+        need,
+        urgency,
+        budget,
+        score,
+        action,
+        summary,
+        raw: text
+      };
+    }
+
+    function extractName(text) {
+      const patterns = [
+        /\bthis is ([A-Z][a-z]+(?: [A-Z][a-z]+)?)/,
+        /\bmy name is ([A-Z][a-z]+(?: [A-Z][a-z]+)?)/,
+        /\bi am ([A-Z][a-z]+(?: [A-Z][a-z]+)?)/,
+        /\bi'm ([A-Z][a-z]+(?: [A-Z][a-z]+)?)/,
+        /\bfrom ([A-Z][a-z]+) from\b/
+      ];
+
+      for (const pattern of patterns) {
+        const match = text.match(pattern);
+        if (match?.[1]) {
+          return match[1].trim();
+        }
+      }
+
+      const emailName = text.match(/([a-z]+)[._-]?[a-z]*@[a-z0-9.-]+\.[a-z]{2,}/i)?.[1];
+      return emailName ? titleCase(emailName) : '';
+    }
+
+    function classifyBusiness(lower) {
+      if (/dental|clinic|doctor|patient|treatment|medical/.test(lower)) return 'Clinic or healthcare business';
+      if (/restaurant|reservation|delivery|table|event/.test(lower)) return 'Restaurant or hospitality business';
+      if (/agency|marketing|client|contractor|campaign/.test(lower)) return 'Agency or service business';
+      if (/contractor|hvac|plumber|roof|repair/.test(lower)) return 'Home service business';
+      return 'Local business';
+    }
+
+    function classifyNeed(lower) {
+      if (/miss|calls|answer|reception|phone/.test(lower)) return 'AI call answering and receptionist handoff';
+      if (/form|lead|qualif|score|summary/.test(lower)) return 'Lead qualification and owner summaries';
+      if (/book|schedule|appointment|reservation/.test(lower)) return 'Booking and scheduling support';
+      if (/follow up|gmail|telegram|whatsapp/.test(lower)) return 'Lead routing and follow-up automation';
+      return 'Inbound lead handling';
+    }
+
+    function classifyUrgency(lower) {
+      if (/today|asap|urgent|emergency|this week|before next weekend|quickly/.test(lower)) return 'High';
+      if (/next week|soon|month|start/.test(lower)) return 'Medium';
+      return 'Low';
+    }
+
+    function extractBudget(text) {
+      const money = text.match(/(?:\$|usd\s*)\s?[\d,]+(?:\s?-\s?(?:\$|usd\s*)?\s?[\d,]+)?/i)?.[0];
+      if (money) return money.replace(/\s+/g, ' ');
+      const range = text.match(/\b[\d,]+\s?(?:to|-)\s?[\d,]+\b/)?.[0];
+      return range || 'Not stated';
+    }
+
+    function scoreLead({ contact, urgency, budget, need, text }) {
+      let score = 28;
+      if (contact !== 'Missing') score += 18;
+      if (urgency === 'High') score += 24;
+      if (urgency === 'Medium') score += 12;
+      if (budget !== 'Not stated') score += 14;
+      if (/answer|qualif|book|summary|telegram|gmail|calls|lead/i.test(need)) score += 10;
+      if (text.length > 120) score += 6;
+      return Math.min(score, 98);
+    }
+
+    function chooseAction(score, urgency, contact) {
+      if (contact === 'Missing') return 'Ask for contact details before routing';
+      if (score >= 82 || urgency === 'High') return 'Call back within 5 minutes';
+      if (score >= 62) return 'Send booking link and qualify budget';
+      return 'Send nurture reply and request missing details';
+    }
+
+    function renderLead(result) {
+      fields.scoreMetric.textContent = String(result.score);
+      fields.urgencyMetric.textContent = result.urgency;
+      fields.actionMetric.textContent = result.action.replace(' within ', ' in ');
+      fields.summary.textContent = result.summary;
+      fields.leadName.textContent = result.name;
+      fields.leadContact.textContent = result.contact;
+      fields.leadNeed.textContent = result.need;
+      fields.leadAction.textContent = result.action;
+      fields.telegramPreview.textContent = [
+        'New qualified lead',
+        '',
+        `Buyer: ${result.name}`,
+        `Contact: ${result.contact}`,
+        `Business: ${result.business}`,
+        `Need: ${result.need}`,
+        `Urgency: ${result.urgency}`,
+        `Budget: ${result.budget}`,
+        `Score: ${result.score}/100`,
+        '',
+        `Action: ${result.action}`
+      ].join('\n');
+      fields.gmailPreview.textContent = [
+        `Subject: Qualified lead: ${result.name}`,
+        '',
+        result.summary,
+        '',
+        'Suggested reply:',
+        `Hi ${result.name.split(' ')[0] || 'there'}, thanks for reaching out. I can help with ${result.need.toLowerCase()}. The fastest next step is a short call so we can map your workflow and timeline.`
+      ].join('\n');
+    }
+
+    function titleCase(value) {
+      return value.slice(0, 1).toUpperCase() + value.slice(1).toLowerCase();
+    }
+
+    const canvas = document.getElementById('scene');
+    const renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: true,
+      alpha: false,
+      powerPreference: 'high-performance',
+      preserveDrawingBuffer: true
+    });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.8));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x06070a);
+    const camera = new THREE.PerspectiveCamera(44, window.innerWidth / window.innerHeight, 0.1, 90);
+    camera.position.set(0, 1.1, 10);
+
+    const group = new THREE.Group();
+    scene.add(group);
+
+    const ambient = new THREE.AmbientLight(0xbfdfff, 0.35);
+    scene.add(ambient);
+    const key = new THREE.DirectionalLight(0xffffff, 1.9);
+    key.position.set(3, 5, 4);
+    scene.add(key);
+    const side = new THREE.PointLight(0x91f3bd, 2.6, 22);
+    side.position.set(-5, -1, 4);
+    scene.add(side);
+
+    const grid = new THREE.GridHelper(24, 34, 0x1c6a88, 0x183445);
+    grid.position.y = -3.2;
+    grid.material.transparent = true;
+    grid.material.opacity = 0.42;
+    group.add(grid);
+
+    const lineMaterial = new THREE.LineBasicMaterial({
+      color: 0x78d7ff,
+      transparent: true,
+      opacity: 0.34
+    });
+    const ringMaterial = new THREE.MeshPhysicalMaterial({
+      color: 0x78d7ff,
+      metalness: 0.0,
+      roughness: 0.18,
+      transmission: 0.35,
+      transparent: true,
+      opacity: 0.48,
+      emissive: 0x07394f,
+      emissiveIntensity: 0.55
+    });
+
+    const nodes = [];
+    for (let i = 0; i < 18; i++) {
+      const angle = (i / 18) * Math.PI * 2;
+      const radius = 3.2 + (i % 4) * 0.62;
+      const geometry = new THREE.BoxGeometry(0.08, 0.08, 0.08);
+      const material = new THREE.MeshStandardMaterial({
+        color: i % 3 === 0 ? 0x91f3bd : i % 3 === 1 ? 0x78d7ff : 0xff9b88,
+        emissive: i % 3 === 0 ? 0x123822 : i % 3 === 1 ? 0x07394f : 0x4a140f,
+        emissiveIntensity: 1.2,
+        roughness: 0.42
+      });
+      const node = new THREE.Mesh(geometry, material);
+      node.position.set(Math.cos(angle) * radius, Math.sin(angle * 1.7) * 0.8, Math.sin(angle) * radius - 1.8);
+      nodes.push(node);
+      group.add(node);
+    }
+
+    for (let i = 0; i < nodes.length; i++) {
+      const a = nodes[i].position;
+      const b = nodes[(i + 5) % nodes.length].position;
+      const geometry = new THREE.BufferGeometry().setFromPoints([a.clone(), b.clone()]);
+      group.add(new THREE.Line(geometry, lineMaterial.clone()));
+    }
+
+    for (let i = 0; i < 4; i++) {
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(1.4 + i * 0.55, 0.012, 12, 96), ringMaterial.clone());
+      ring.rotation.x = Math.PI / 2.7;
+      ring.rotation.y = i * 0.42;
+      ring.position.z = -1.4 - i * 0.34;
+      group.add(ring);
+    }
+
+    const pointer = { x: 0, y: 0 };
+    window.addEventListener('pointermove', (event) => {
+      pointer.x = (event.clientX / window.innerWidth - 0.5) * 2;
+      pointer.y = (event.clientY / window.innerHeight - 0.5) * -2;
+    }, { passive: true });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    const clock = new THREE.Clock();
+    function animate() {
+      const t = clock.getElapsedTime();
+      group.rotation.y = t * 0.08 + pointer.x * 0.08;
+      group.rotation.x = -0.12 + pointer.y * 0.04;
+      grid.position.z = ((t * 0.75) % 1) - 0.5;
+      nodes.forEach((node, index) => {
+        node.scale.setScalar(1 + Math.sin(t * 2.2 + index) * 0.28);
+        node.position.y += Math.sin(t * 1.4 + index) * 0.0009;
+      });
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+    animate();
+
+    renderLead(qualifyLead(inquiry.value));
+    steps.forEach((step) => {
+      step.classList.add('done');
+      step.querySelector('.step-state').textContent = 'Done';
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "name": "tiny-ai-receptionist-operator",
+  "version": "1.0.0",
+  "description": "Open-source AI receptionist demo that turns messy inbound inquiries into qualified lead handoffs.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js"
+  },
+  "keywords": [
+    "ai-receptionist",
+    "lead-qualification",
+    "threejs",
+    "open-source",
+    "business-automation"
+  ],
+  "author": "Bles Software",
+  "license": "MIT"
+}
