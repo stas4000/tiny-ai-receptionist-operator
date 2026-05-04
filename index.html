@@ -467,10 +467,17 @@
         flex-direction: column;
       }
 
-      .sample-grid,
       .metric-strip,
       .lead-fields {
         grid-template-columns: 1fr;
+      }
+
+      .sample-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .sample-btn {
+        font-size: 0.74rem;
       }
 
       .panel-head {
